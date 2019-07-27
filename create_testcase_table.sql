@@ -1,0 +1,9 @@
+CREATE TABLE test_case (
+id INT PRIMARY KEY AUTO_INCREMENT COMMENT '用例id',
+interface_name VARCHAR ( 200 ) NOT NULL COMMENT '接口名称',
+url VARCHAR ( 200 ) NOT NULL COMMENT '接口url地址',
+method VARCHAR ( 200 ) NOT NULL COMMENT '请求方法',
+param VARCHAR ( 200 ) COMMENT '请求参数',
+body VARCHAR ( 200 ) COMMENT '请求体',
+expect_result VARCHAR ( 200 ) NOT NULL COMMENT '预期结果'
+)ENGINE=INNODB CHARSET=utf8 COMMENT '测试用例表';
