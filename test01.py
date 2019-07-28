@@ -1,14 +1,36 @@
+from env_variables import HOSTNAME, token, LOGIN
 import requests
+import MySQLdb
 
-HOSTNAME = ''
 
 HEADERS = {
 	'Host': HOSTNAME,
-	'Connection': 'keep-alive',
 	'Authorization': token,
-	# 'Content-Type': 'application/json'
-
+	'Content-Type': 'application/json'
 }
+
+def getCaseList(login_information):
+	case_list = []
+
+	# 连接数据库
+	conn = MySQLdb.connect(
+		host=LOGIN['mysql_host'],
+		port=LOGIN['mysql_port'],
+		user=LOGIN['mysql_user'],
+		passwd=LOGIN['mysql_passwd'],
+		db=LOGIN['mysql_db'],
+		charset=LOGIN['charset']   # 这个参数决定python能否正常读取mysql中记录的中文
+		)
+	cur = conn.cursor()
+
+	data = cur.fetchmany()
+	for i in data:
+		case_list.append(i)
+
+	cur.close()
+	conn.close()
+
+	return case_list
 
 def urlParam(param): # param应该是一个dict
 	url = ''
