@@ -2,19 +2,18 @@ from env_variables import HOSTS, token, LOGIN
 import requests
 import json
 import MySQLdb
+import datetime
 
 
 
 HEADERS = {
-    # 'Host': HOSTNAME,
     'Authorization': token,
     'Content-Type': 'application/json'
 }
 
-def getCaseList(login_information):
-    case_list = []
 
-    # 连接数据库
+def connectMySQL(login_information):
+
     conn = MySQLdb.connect(
         host=login_information['mysql_host'],
         port=login_information['mysql_port'],
@@ -23,15 +22,30 @@ def getCaseList(login_information):
         db=login_information['db'],
         charset=login_information['charset']   # 这个参数决定python能否正常读取mysql中记录的中文
         )
-    cur = conn.cursor()
+    return conn
 
-    cur.execute("select * from test_casess")
+
+def getCaseList(connection=connectMySQL(LOGIN)):
+    case_list = []
+
+    # 连接数据库
+    # conn = MySQLdb.connect(
+    #     host=login_information['mysql_host'],
+    #     port=login_information['mysql_port'],
+    #     user=login_information['mysql_user'],
+    #     passwd=login_information['mysql_passwd'],
+    #     db=login_information['db'],
+    #     charset=login_information['charset']   # 这个参数决定python能否正常读取mysql中记录的中文
+    #     )
+    cur = connection.cursor()
+
+    cur.execute("select * from test_case")
     data = cur.fetchmany()
     for i in data:
         case_list.append(i)
 
     cur.close()
-    conn.close()
+    connection.close()
 
     return case_list
 
@@ -41,6 +55,42 @@ def urlParam(param): # param应该是一个dict
     for k, v in param.items:
         url = url + '?' + '%s=%s'%(k,v)
     return url
+
+
+def counting(connection=connectMySQL(LOGIN)):
+    cur = connection.cursor()
+
+    flag = cur.execute("select * from counting")
+    if flag == 0:   # 表中没有任何记录，则为第一次执行测试
+        cur.execute("insert into counting values(1)")
+    if flag == 1:   # 表中有记录，则不为第一次，需要从表中读取数据后，修改表中数据
+        count = cur.fetchone()[0]
+        cur.execute("update counting set count=%d"%(count+1))
+    cur.close()
+    connection.close()
+
+    print('记录次数成功！')
+
+
+def addLogs(test_case_id, is_success=1, connection=connectMySQL(LOGIN)):
+    create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    cur = connection.cursor()
+    cur.execute("select * from counting")
+    count = cur.fetchone()[0]
+    cur.close()
+
+    cur = connection.cursor()
+    cur.execute("insert into logs (count, test_case_id, is_success, create_at) values (%d, %d, %d, %s)"%(count, test_case_id, is_success, create_at))
+    cur.close()
+
+    connection.close()
+
+    print('记录日志成功！')
+
+
+def addBugLogs():
+    pass
 
 
 def interfaceTest(case_list):
@@ -56,7 +106,7 @@ def interfaceTest(case_list):
             body = case[6]
             expect_result = json.loads(case[7])  # str转json，需要严格注意引号，单引号会报错
         except:
-            return '测试用例格式不正确！'
+            return '测试用例格式不正确！'     # 测试用例格式不正确时，不再继续读取用例，结束测试
 
         if param in ('', None):
             new_url = 'https://' + host + url
@@ -71,23 +121,27 @@ def interfaceTest(case_list):
 
         if method.upper() == 'PUT':
 
-
-            print(str(case_id) + new_url)
-            headers = HEADERS
-
-            result = requests.put(new_url, headers=headers, data=body).json()
-            # print(result['code'], type(result['code']))
-            # print(expect_result['code'], type(expect_result['code']))
-            if result['code'] != expect_result['code']:
-
-                # 记录bug
+            r = requests.put(new_url, headers=headers, data=body)
+            try:
+                result = r.json()
+            except json.decoder.JSONDecodeError:
+                # 记录status_code到bug_logs
+                addLogs(case_id, 0)
                 pass
             else:
-                print('Test success!')
+                if result['code'] != expect_result['code']:
+                    # 记录实际响应到bug_logs
+                    addLogs(case_id, 0)
+                    pass
+                else:
+                    addLogs(case_id)
+
+
 
 
 def doTest():
-    case_list = getCaseList(LOGIN)
+    counting()
+    case_list = getCaseList()
     interfaceTest(case_list)
 
 

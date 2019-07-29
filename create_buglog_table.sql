@@ -6,5 +6,6 @@ CREATE TABLE `bug_logs`(
     `method` VARCHAR ( 255 ) NOT NULL COMMENT '请求方法',
     `expect_result` VARCHAR ( 255 ) NOT NULL COMMENT '预期结果',
     `response` VARCHAR ( 255 ) NOT NULL COMMENT '响应',
-    `result` VARCHAR ( 255 ) NOT NULL COMMENT '实际结果'
+    `result` VARCHAR ( 255 ) NOT NULL COMMENT '实际结果',
+    `create_at` DATETIME NOT NULL COMMENT '记录时间'
 )ENGINE=INNODB CHARSET=utf8mb4 COMMENT 'bug记录表';
