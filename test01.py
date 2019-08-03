@@ -5,7 +5,6 @@ import MySQLdb
 import datetime
 
 
-
 HEADERS = {
     'Authorization': token,
     'Content-Type': 'application/json'
@@ -13,6 +12,9 @@ HEADERS = {
 
 
 def connectMySQL(login_information):
+    '''
+    连接数据库
+    '''
 
     conn = MySQLdb.connect(
         host=login_information['mysql_host'],
@@ -21,11 +23,15 @@ def connectMySQL(login_information):
         passwd=login_information['mysql_passwd'],
         db=login_information['db'],
         charset=login_information['charset']   # 这个参数决定python能否正常读取mysql中记录的中文
-        )
+    )
     return conn
 
 
 def getCaseList(connection=connectMySQL(LOGIN)):
+    '''
+    从数据库中读取测试用例
+    '''
+
     case_list = []
 
     # 连接数据库
@@ -35,7 +41,7 @@ def getCaseList(connection=connectMySQL(LOGIN)):
     #     user=login_information['mysql_user'],
     #     passwd=login_information['mysql_passwd'],
     #     db=login_information['db'],
-    #     charset=login_information['charset']   # 这个参数决定python能否正常读取mysql中记录的中文
+    #     charset=login_information['charset']    这个参数决定python能否正常读取mysql中记录的中文
     #     )
     cur = connection.cursor()
 
@@ -45,45 +51,65 @@ def getCaseList(connection=connectMySQL(LOGIN)):
         case_list.append(i)
 
     cur.close()
+    connection.commit()            # 读取操作可以忽略改句，修改到数据库数据的必须使用
     connection.close()
 
     return case_list
 
 
-def urlParam(param): # param应该是一个dict
+def urlParam(param):  # param应该是一个dict
+    '''
+    组装请求路径
+    '''
+
     url = ''
     for k, v in param.items:
-        url = url + '?' + '%s=%s'%(k,v)
+        url = url + '?' + '%s=%s' % (k, v)
     return url
 
 
 def counting(connection=connectMySQL(LOGIN)):
+    '''
+    修改数据库中测试次数
+    '''
+
     cur = connection.cursor()
 
     flag = cur.execute("select * from counting")
     if flag == 0:   # 表中没有任何记录，则为第一次执行测试
-        cur.execute("insert into counting values(1)")
-    if flag == 1:   # 表中有记录，则不为第一次，需要从表中读取数据后，修改表中数据
-        count = cur.fetchone()[0]
-        cur.execute("update counting set count=%d"%(count+1))
+        print(1)
+        cur.execute("insert into counting (count) values (1)")
+    elif flag == 1:   # 表中有记录，则不为第一次，需要从表中读取数据后，修改表中数据
+        print(2)
+        count = cur.fetchone()[1]
+        print(count)
+        cur.execute("update counting set count=%d" % (count+1))
     cur.close()
+    connection.commit()
     connection.close()
 
     print('记录次数成功！')
 
 
 def addLogs(test_case_id, is_success=1, connection=connectMySQL(LOGIN)):
+    '''
+    记录测试用例执行日志，默认执行成功
+    '''
+
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print(create_at, type(create_at))
 
     cur = connection.cursor()
     cur.execute("select * from counting")
-    count = cur.fetchone()[0]
+    # print(cur.fetchone())
+    count = cur.fetchone()[1]
     cur.close()
 
     cur = connection.cursor()
-    cur.execute("insert into logs (count, test_case_id, is_success, create_at) values (%d, %d, %d, %s)"%(count, test_case_id, is_success, create_at))
+    cur.execute("insert into logs (count, test_case_id, is_success, create_at) values (%d, %d, %d, '%s')" % (
+        count, test_case_id, is_success, create_at))
     cur.close()
-
+    connection.commit()
     connection.close()
 
     print('记录日志成功！')
@@ -115,16 +141,16 @@ def interfaceTest(case_list):
 
         # if method.upper() == 'GET':
         #     print(str(case_id) + new_url)
-        #     headers = 
+        #     headers =
 
         # if method.upper() == 'POST':
 
         if method.upper() == 'PUT':
 
-            r = requests.put(new_url, headers=headers, data=body)
+            r = requests.put(new_url, headers=HEADERS, data=body)
             try:
                 result = r.json()
-            except json.decoder.JSONDecodeError:
+            except json.decoder.JSONDecodeError: # 即返回的状态码不为200
                 # 记录status_code到bug_logs
                 addLogs(case_id, 0)
                 pass
@@ -137,13 +163,10 @@ def interfaceTest(case_list):
                     addLogs(case_id)
 
 
-
-
 def doTest():
     counting()
     case_list = getCaseList()
     interfaceTest(case_list)
-
 
 
 if __name__ == '__main__':
