@@ -97,7 +97,7 @@ def addLogs(test_case_id, is_success=1, connection=connectMySQL(LOGIN)):
     '''
 
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    print(create_at, type(create_at))
+    # print(create_at, type(create_at))
 
     cur = connection.cursor()
     cur.execute("select * from counting")
@@ -115,8 +115,32 @@ def addLogs(test_case_id, is_success=1, connection=connectMySQL(LOGIN)):
     print('记录日志成功！')
 
 
-def addBugLogs():
-    pass
+def addBugLogs(param_list, connection=connectMySQL(LOGIN)):
+    '''
+    记录bug
+    '''
+
+    test_case_id = param_list[0]
+    request_url = param_list[1]
+    method = param_list[2]
+    expect_result = param_list[3]
+    response = param_list[4]
+    result = param_list[5]
+
+    create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    cur.execute("select * from counting")
+    count = cur.fetchone()[1]
+    cur.close()
+
+    cur = connection.cursor()
+    cur.execute("insert into bug_logs (count, test_case_id, request_url, method, expect_result, response, result, create_at) values (%d, %d, %s, %s, %s, %s, %s, '%s')" % (
+        count, test_case_id, request_url, method, expect_result, response, result, create_at))
+    cur.close()
+    connection.commit()
+    connection.close()
+
+    print('记录bug成功！')
 
 
 def interfaceTest(case_list):
@@ -149,17 +173,17 @@ def interfaceTest(case_list):
 
             r = requests.put(new_url, headers=HEADERS, data=body)
             try:
-                result = r.json()
-            except json.decoder.JSONDecodeError: # 即返回的状态码不为200
-                # 记录status_code到bug_logs
+                response = r.json()
+            except json.decoder.JSONDecodeError:  # 即返回的状态码不为200
+                e_result = "{'status_code': 200}"
+                result = "{'status_code': %d}"% r.status_code
+                addBugLogs([case_id, new_url, method, e_result, r.text, result])
                 addLogs(case_id, 0)
-                pass
             else:
-                if result['code'] != expect_result['code']:
-                    # 记录实际响应到bug_logs
+                if response['code'] != expect_result['code']: # 即响应内容与预期不符，目前只判断了响应中的code
+                    addBugLogs([case_id, new_url, method, json.dumps(expect_result), r.text, response])
                     addLogs(case_id, 0)
-                    pass
-                else:
+                else: # 即用例通过
                     addLogs(case_id)
 
 
