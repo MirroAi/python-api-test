@@ -205,6 +205,32 @@ def addBugLogs(param_list):
     print('记录bug成功！')
 
 
+def assertSth(r, param_list):  # r为request对象， param_list为list
+    '''
+    每种方法目前使用的断言以及记录流程是一样的
+    '''
+    case_id = param_list[0]
+    interface_name = param_list[1]
+    new_url = param_list[2]
+    method = param_list[3]
+    expect_result = param_list[4]
+
+
+    try:
+        response = r.json()
+    except json.decoder.JSONDecodeError:
+        e_result = '{"status_code": 200}'
+        result = '{"status_code": %d}' % r.status_code
+        addLogs(case_id, interface_name, 0)
+        addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+    else:
+        if response['code'] != expect_result['code']:
+            addLogs(case_id, interface_name, 0)
+            addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+        else:
+            addLogs(case_id, interface_name)
+
+
 def interfaceTest(case_list):
     # request_urls = []
     for case in case_list:
@@ -230,75 +256,79 @@ def interfaceTest(case_list):
             print('sending get request...')
             
             r = requests.get(new_url, headers=HEADERS, params=param)
-            try:
-                response = r.json()
-            except json.decoder.JSONDecodeError:
-                e_result = '{"status_code": 200}'
-                result = '{"status_code": %d}' % r.status_code
-                addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
-            else:
-                if response['code'] != expect_result['code']:
-                    addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
-                else:
-                    addLogs(case_id, interface_name)
+            # try:
+            #     response = r.json()
+            # except json.decoder.JSONDecodeError:
+            #     e_result = '{"status_code": 200}'
+            #     result = '{"status_code": %d}' % r.status_code
+            #     addLogs(case_id, interface_name, 0)
+            #     addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            # else:
+            #     if response['code'] != expect_result['code']:
+            #         addLogs(case_id, interface_name, 0)
+            #         addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+            #     else:
+            #         addLogs(case_id, interface_name)
+            assertSth(r, [case_id, interface_name, new_url, method, expect_result])
 
         if method.upper() == 'POST':
             print('sending post request...')
 
             r = requests.post(new_url, headers=HEADERS, data=body)
-            try:
-                response = r.json()
-            except json.decoder.JSONDecodeError:
-                e_result = '{"status_code": 200}'
-                result = '{"status_code": %d}' % r.status_code
-                addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
-            else:
-                if response['code'] != expect_result['code']:
-                    addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
-                else:
-                    addLogs(case_id, interface_name)
+            # try:
+            #     response = r.json()
+            # except json.decoder.JSONDecodeError:
+            #     e_result = '{"status_code": 200}'
+            #     result = '{"status_code": %d}' % r.status_code
+            #     addLogs(case_id, interface_name, 0)
+            #     addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            # else:
+            #     if response['code'] != expect_result['code']:
+            #         addLogs(case_id, interface_name, 0)
+            #         addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+            #     else:
+            #         addLogs(case_id, interface_name)
+            assertSth(r, [case_id, interface_name, new_url, method, expect_result])
 
         if method.upper() == 'PUT':
             print('sending put request...')
 
             r = requests.put(new_url, headers=HEADERS, data=body)
-            try:
-                response = r.json() 
-            except json.decoder.JSONDecodeError:  # 即返回的状态码不为200
-                e_result = '{"status_code": 200}'
-                result = '{"status_code": %d}' % r.status_code
-                addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
-            else:
-                if response['code'] != expect_result['code']:  # 即响应内容与预期不符，目前只判断了响应中的code
-                    addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
-                else:  # 即用例通过
-                    addLogs(case_id, interface_name)
+            # try:
+            #     response = r.json() 
+            # except json.decoder.JSONDecodeError:  # 即返回的状态码不为200
+            #     e_result = '{"status_code": 200}'
+            #     result = '{"status_code": %d}' % r.status_code
+            #     addLogs(case_id, interface_name, 0)
+            #     addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            # else:
+            #     if response['code'] != expect_result['code']:  # 即响应内容与预期不符，目前只判断了响应中的code
+            #         addLogs(case_id, interface_name, 0)
+            #         addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+            #     else:  # 即用例通过
+            #         addLogs(case_id, interface_name)
+            assertSth(r, [case_id, interface_name, new_url, method, expect_result])
 
 
         if method.upper() == 'DELETE':
             print('sending delete request...')
 
             r = requests.delete(new_url, headers=HEADERS, data=body)
-            try:
-                response = r.json()
-            except json.decoder.JSONDecodeError:
-                e_result = '{"status_code": 200}'
-                result = '{"status_code": %d}' % r.status_code
-                addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
-            else:
-                if response['code'] != expect_result['code']:
-                    addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
-                else:
-                    addLogs(case_id, interface_name)
-                    
+            # try:
+            #     response = r.json()
+            # except json.decoder.JSONDecodeError:
+            #     e_result = '{"status_code": 200}'
+            #     result = '{"status_code": %d}' % r.status_code
+            #     addLogs(case_id, interface_name, 0)
+            #     addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            # else:
+            #     if response['code'] != expect_result['code']:
+            #         addLogs(case_id, interface_name, 0)
+            #         addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+            #     else:
+            #         addLogs(case_id, interface_name)
+            assertSth(r, [case_id, interface_name, new_url, method, expect_result])
+
 
 def doTest():
     counting()
