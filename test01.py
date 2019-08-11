@@ -32,7 +32,7 @@ def getCaseList():
     从数据库中读取测试用例
     '''
 
-    conn = MySQLdb.connect(LOGIN)
+    conn = connectMySQL(LOGIN)
 
     case_list = []
 
@@ -48,7 +48,7 @@ def getCaseList():
     cur = conn.cursor()
 
     cur.execute("select * from test_case")
-    data = cur.fetchmany()
+    data = cur.fetchall()
     for i in data:
         case_list.append(i)
 
@@ -75,19 +75,16 @@ def counting():
     修改数据库中测试次数
     '''
 
-    conn = MySQLdb.connect(LOGIN)
+    conn = connectMySQL(LOGIN)
 
     cur = conn.cursor()
 
     flag = cur.execute("select * from counting")
     if flag == 0:   # 表中没有任何记录，则为第一次执行测试
-        print(1)
         cur.execute("insert into counting (count) values (1)")
     elif flag == 1:   # 表中有记录，则不为第一次，需要从表中读取数据后，修改表中数据
-        print(2)
-        count = cur.fetchone()[1]
-        print(count)
-        cur.execute("update counting set count=%d" % (count+1))
+        count_num = cur.fetchone()[1]
+        cur.execute("update counting set count=%d" % (count_num+1))
     cur.close()
     conn.commit()
     conn.close()
@@ -95,25 +92,24 @@ def counting():
     print('记录次数成功！')
 
 
-def addLogs(test_case_id, is_success=1):
+def addLogs(test_case_id, test_case_name, is_success=1):
     '''
     记录测试用例执行日志，默认执行成功
     '''
 
-    conn = MySQLdb.connect(LOGIN)
+    conn = connectMySQL(LOGIN)
 
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # print(create_at, type(create_at))
 
     cur = conn.cursor()
     cur.execute("select * from counting")
-    # print(cur.fetchone())
-    count = cur.fetchone()[1]
+    count_num = cur.fetchone()[1]
     cur.close()
 
     cur = conn.cursor()
-    cur.execute("insert into logs (count, test_case_id, is_success, create_at) values (%d, %d, %d, '%s')" % (
-        count, test_case_id, is_success, create_at))
+    cur.execute("insert into logs (count, test_case_id, test_case_name, is_success, create_at) values (%d, %d, '%s', %d, '%s')" % (
+        count_num, test_case_id, test_case_name, is_success, create_at))
     cur.close()
     conn.commit()
     conn.close()
@@ -126,25 +122,28 @@ def addBugLogs(param_list):
     记录bug
     '''
 
-    conn = MySQLdb.connect(LOGIN)
+    conn = connectMySQL(LOGIN)
 
     test_case_id = param_list[0]
-    request_url = param_list[1]
-    method = param_list[2]
-    expect_result = param_list[3]
-    response = param_list[4]
-    result = param_list[5]
+    test_case_name = param_list[1]
+    request_url = param_list[2]
+    method = param_list[3]
+    expect_result = param_list[4]
+    response = param_list[5]
+    result = param_list[6]
 
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     cur = conn.cursor()
     cur.execute("select * from counting")
-    count = cur.fetchone()[1]
+    count_num = cur.fetchone()[1]
     cur.close()
 
     cur = conn.cursor()
-    cur.execute("insert into bug_logs (count, test_case_id, request_url, method, expect_result, response, result, create_at) values (%d, %d, %s, %s, %s, %s, %s, '%s')" % (
-        count, test_case_id, request_url, method, expect_result, response, result, create_at))
+    print("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
+        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
+    cur.execute("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
+        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
     cur.close()
     conn.commit()
     conn.close()
@@ -182,17 +181,19 @@ def interfaceTest(case_list):
 
             r = requests.put(new_url, headers=HEADERS, data=body)
             try:
-                response = r.json()
+                response = r.json() 
             except json.decoder.JSONDecodeError:  # 即返回的状态码不为200
-                e_result = "{'status_code': 200}"
-                result = "{'status_code': %d}"% r.status_code
-                addBugLogs([case_id, new_url, method, e_result, r.text, result])
+                e_result = '{"status_code": 200}'
+                result = '{"status_code": %d}' % r.status_code
                 addLogs(case_id, interface_name, 0)
+                addBugLogs([case_id, interface_name, new_url, method,
+                            e_result, r.text, result])
             else:
-                if response['code'] != expect_result['code']: # 即响应内容与预期不符，目前只判断了响应中的code
-                    addBugLogs([case_id, new_url, method, json.dumps(expect_result), r.text, response])
+                if response['code'] != expect_result['code']:  # 即响应内容与预期不符，目前只判断了响应中的code
                     addLogs(case_id, interface_name, 0)
-                else: # 即用例通过
+                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(
+                        expect_result), r.text, r.text])
+                else:  # 即用例通过
                     addLogs(case_id, interface_name)
 
 
