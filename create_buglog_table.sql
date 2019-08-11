@@ -2,6 +2,7 @@ CREATE TABLE `bug_logs`(
     `id` INT PRIMARY KEY AUTO_INCREMENT COMMENT 'bug记录id',
     `count` INT NOT NULL COMMENT '第几次执行',
     `test_case_id` INT NOT NULL COMMENT '测试用例id',
+    `test_case_name` VARCHAR ( 255 ) NOT NULL COMMENT '测试用例名',
     `request_url` VARCHAR ( 255 ) NOT NULL COMMENT '请求url',
     `method` VARCHAR ( 255 ) NOT NULL COMMENT '请求方法',
     `expect_result` VARCHAR ( 255 ) NOT NULL COMMENT '预期结果',
