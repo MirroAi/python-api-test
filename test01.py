@@ -27,10 +27,12 @@ def connectMySQL(login_information):
     return conn
 
 
-def getCaseList(connection=connectMySQL(LOGIN)):
+def getCaseList():
     '''
     从数据库中读取测试用例
     '''
+
+    conn = MySQLdb.connect(LOGIN)
 
     case_list = []
 
@@ -43,7 +45,7 @@ def getCaseList(connection=connectMySQL(LOGIN)):
     #     db=login_information['db'],
     #     charset=login_information['charset']    这个参数决定python能否正常读取mysql中记录的中文
     #     )
-    cur = connection.cursor()
+    cur = conn.cursor()
 
     cur.execute("select * from test_case")
     data = cur.fetchmany()
@@ -51,8 +53,8 @@ def getCaseList(connection=connectMySQL(LOGIN)):
         case_list.append(i)
 
     cur.close()
-    connection.commit()            # 读取操作可以忽略改句，修改到数据库数据的必须使用
-    connection.close()
+    conn.commit()            # 读取操作可以忽略改句，修改到数据库数据的必须使用
+    conn.close()
 
     return case_list
 
@@ -68,12 +70,14 @@ def urlParam(param):  # param应该是一个dict
     return url
 
 
-def counting(connection=connectMySQL(LOGIN)):
+def counting():
     '''
     修改数据库中测试次数
     '''
 
-    cur = connection.cursor()
+    conn = MySQLdb.connect(LOGIN)
+
+    cur = conn.cursor()
 
     flag = cur.execute("select * from counting")
     if flag == 0:   # 表中没有任何记录，则为第一次执行测试
@@ -85,40 +89,44 @@ def counting(connection=connectMySQL(LOGIN)):
         print(count)
         cur.execute("update counting set count=%d" % (count+1))
     cur.close()
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     print('记录次数成功！')
 
 
-def addLogs(test_case_id, is_success=1, connection=connectMySQL(LOGIN)):
+def addLogs(test_case_id, is_success=1):
     '''
     记录测试用例执行日志，默认执行成功
     '''
 
+    conn = MySQLdb.connect(LOGIN)
+
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     # print(create_at, type(create_at))
 
-    cur = connection.cursor()
+    cur = conn.cursor()
     cur.execute("select * from counting")
     # print(cur.fetchone())
     count = cur.fetchone()[1]
     cur.close()
 
-    cur = connection.cursor()
+    cur = conn.cursor()
     cur.execute("insert into logs (count, test_case_id, is_success, create_at) values (%d, %d, %d, '%s')" % (
         count, test_case_id, is_success, create_at))
     cur.close()
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     print('记录日志成功！')
 
 
-def addBugLogs(param_list, connection=connectMySQL(LOGIN)):
+def addBugLogs(param_list):
     '''
     记录bug
     '''
+
+    conn = MySQLdb.connect(LOGIN)
 
     test_case_id = param_list[0]
     request_url = param_list[1]
@@ -129,16 +137,17 @@ def addBugLogs(param_list, connection=connectMySQL(LOGIN)):
 
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
+    cur = conn.cursor()
     cur.execute("select * from counting")
     count = cur.fetchone()[1]
     cur.close()
 
-    cur = connection.cursor()
+    cur = conn.cursor()
     cur.execute("insert into bug_logs (count, test_case_id, request_url, method, expect_result, response, result, create_at) values (%d, %d, %s, %s, %s, %s, %s, '%s')" % (
         count, test_case_id, request_url, method, expect_result, response, result, create_at))
     cur.close()
-    connection.commit()
-    connection.close()
+    conn.commit()
+    conn.close()
 
     print('记录bug成功！')
 
@@ -178,13 +187,13 @@ def interfaceTest(case_list):
                 e_result = "{'status_code': 200}"
                 result = "{'status_code': %d}"% r.status_code
                 addBugLogs([case_id, new_url, method, e_result, r.text, result])
-                addLogs(case_id, 0)
+                addLogs(case_id, interface_name, 0)
             else:
                 if response['code'] != expect_result['code']: # 即响应内容与预期不符，目前只判断了响应中的code
                     addBugLogs([case_id, new_url, method, json.dumps(expect_result), r.text, response])
-                    addLogs(case_id, 0)
+                    addLogs(case_id, interface_name, 0)
                 else: # 即用例通过
-                    addLogs(case_id)
+                    addLogs(case_id, interface_name)
 
 
 def doTest():
