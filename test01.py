@@ -244,7 +244,23 @@ def interfaceTest(case_list):
                 else:
                     addLogs(case_id, interface_name)
 
-        # if method.upper() == 'POST':
+        if method.upper() == 'POST':
+            print('sending post request...')
+
+            r = requests.post(new_url, headers=HEADERS, data=body)
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                e_result = '{"status_code": 200}'
+                result = '{"status_code": %d}' % r.status_code
+                addLogs(case_id, interface_name, 0)
+                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            else:
+                if response['code'] != expect_result['code']:
+                    addLogs(case_id, interface_name, 0)
+                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+                else:
+                    addLogs(case_id, interface_name)
 
         if method.upper() == 'PUT':
             print('sending put request...')
@@ -256,19 +272,33 @@ def interfaceTest(case_list):
                 e_result = '{"status_code": 200}'
                 result = '{"status_code": %d}' % r.status_code
                 addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method,
-                            e_result, r.text, result])
+                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
             else:
                 if response['code'] != expect_result['code']:  # 即响应内容与预期不符，目前只判断了响应中的code
                     addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(
-                        expect_result), r.text, r.text])
+                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
                 else:  # 即用例通过
                     addLogs(case_id, interface_name)
 
 
-        # if method.upper() == 'DELETE'
+        if method.upper() == 'DELETE':
+            print('sending delete request...')
 
+            r = requests.delete(new_url, headers=HEADERS, data=body)
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                e_result = '{"status_code": 200}'
+                result = '{"status_code": %d}' % r.status_code
+                addLogs(case_id, interface_name, 0)
+                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            else:
+                if response['code'] != expect_result['code']:
+                    addLogs(case_id, interface_name, 0)
+                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+                else:
+                    addLogs(case_id, interface_name)
+                    
 
 def doTest():
     counting()
