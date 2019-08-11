@@ -52,6 +52,8 @@ def getCaseList():
     for i in data:
         case_list.append(i)
 
+    # print(case_list)
+
     cur.close()
     conn.commit()            # 读取操作可以忽略改句，修改到数据库数据的必须使用
     conn.close()
@@ -65,8 +67,14 @@ def urlParam(param):  # param应该是一个dict
     '''
 
     url = ''
-    for k, v in param.items:
-        url = url + '?' + '%s=%s' % (k, v)
+    flag = 0
+    for k, v in param.items():
+        flag += 1
+        if flag == 1:
+            url += '?'
+        else:
+            url += '&'
+        url += '%s=%s' % (k, v)
     return url
 
 
@@ -198,7 +206,7 @@ def addBugLogs(param_list):
 
 
 def interfaceTest(case_list):
-    request_urls = []
+    # request_urls = []
     for case in case_list:
         try:
             case_id = case[0]
@@ -208,22 +216,38 @@ def interfaceTest(case_list):
             method = case[4]
             param = case[5]
             body = case[6]
-            expect_result = json.loads(case[7])  # str转json，需要严格注意引号，单引号会报错
+            expect_result = json.loads(case[7])  # str转json，得到一个dict，需要严格注意引号，单引号会报错，空字符串也会报错
         except:
             return '测试用例格式不正确！'     # 测试用例格式不正确时，不再继续读取用例，结束测试
 
         if param in ('', None):
             new_url = 'https://' + host + url
         else:
-            new_url = 'https://' + host + url + urlParam(param)
+            new_url = 'https://' + host + url + urlParam(json.loads(param))
 
-        # if method.upper() == 'GET':
-        #     print(str(case_id) + new_url)
-        #     headers =
+
+        if method.upper() == 'GET':
+            print('sending get request...')
+            
+            r = requests.get(new_url, headers=HEADERS, params=param)
+            try:
+                response = r.json()
+            except json.decoder.JSONDecodeError:
+                e_result = '{"status_code": 200}'
+                result = '{"status_code": %d}' % r.status_code
+                addLogs(case_id, interface_name, 0)
+                addBugLogs([case_id, interface_name, new_url, method, e_result, r.text, result])
+            else:
+                if response['code'] != expect_result['code']:
+                    addLogs(case_id, interface_name, 0)
+                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(expect_result), r.text, r.text])
+                else:
+                    addLogs(case_id, interface_name)
 
         # if method.upper() == 'POST':
 
         if method.upper() == 'PUT':
+            print('sending put request...')
 
             r = requests.put(new_url, headers=HEADERS, data=body)
             try:
@@ -241,6 +265,9 @@ def interfaceTest(case_list):
                         expect_result), r.text, r.text])
                 else:  # 即用例通过
                     addLogs(case_id, interface_name)
+
+
+        # if method.upper() == 'DELETE'
 
 
 def doTest():
