@@ -140,8 +140,6 @@ def addBugLogs(param_list):
     cur.close()
 
     cur = conn.cursor()
-    print("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
-        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
     cur.execute("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
         count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
     cur.close()
