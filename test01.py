@@ -92,61 +92,30 @@ def counting():
     print('记录次数成功！')
 
 
-def addLogs(test_case_id, test_case_name, is_success=1):
-    '''
-    记录测试用例执行日志，默认执行成功
-    '''
-
-    conn = connectMySQL(LOGIN)
-
-    create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    # print(create_at, type(create_at))
-
-    cur = conn.cursor()
-    cur.execute("select * from counting")
-    count_num = cur.fetchone()[1]
-    cur.close()
-
-    cur = conn.cursor()
-    cur.execute("insert into logs (count, test_case_id, test_case_name, is_success, create_at) values (%d, %d, '%s', %d, '%s')" % (
-        count_num, test_case_id, test_case_name, is_success, create_at))
-    cur.close()
-    conn.commit()
-    conn.close()
-
-    print('记录日志成功！')
-
-
-def addBugLogs(param_list):
+def addBugLogs(param_list, connection=connectMySQL(LOGIN)):
     '''
     记录bug
     '''
 
-    conn = connectMySQL(LOGIN)
-
     test_case_id = param_list[0]
-    test_case_name = param_list[1]
-    request_url = param_list[2]
-    method = param_list[3]
-    expect_result = param_list[4]
-    response = param_list[5]
-    result = param_list[6]
+    request_url = param_list[1]
+    method = param_list[2]
+    expect_result = param_list[3]
+    response = param_list[4]
+    result = param_list[5]
 
     create_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    cur = conn.cursor()
     cur.execute("select * from counting")
-    count_num = cur.fetchone()[1]
+    count = cur.fetchone()[1]
     cur.close()
 
-    cur = conn.cursor()
-    print("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
-        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
-    cur.execute("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
-        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
+    cur = connection.cursor()
+    cur.execute("insert into bug_logs (count, test_case_id, request_url, method, expect_result, response, result, create_at) values (%d, %d, %s, %s, %s, %s, %s, '%s')" % (
+        count, test_case_id, request_url, method, expect_result, response, result, create_at))
     cur.close()
-    conn.commit()
-    conn.close()
+    connection.commit()
+    connection.close()
 
     print('记录bug成功！')
 
@@ -181,20 +150,18 @@ def interfaceTest(case_list):
 
             r = requests.put(new_url, headers=HEADERS, data=body)
             try:
-                response = r.json() 
+                response = r.json()
             except json.decoder.JSONDecodeError:  # 即返回的状态码不为200
-                e_result = '{"status_code": 200}'
-                result = '{"status_code": %d}' % r.status_code
-                addLogs(case_id, interface_name, 0)
-                addBugLogs([case_id, interface_name, new_url, method,
-                            e_result, r.text, result])
+                e_result = "{'status_code': 200}"
+                result = "{'status_code': %d}"% r.status_code
+                addBugLogs([case_id, new_url, method, e_result, r.text, result])
+                addLogs(case_id, 0)
             else:
-                if response['code'] != expect_result['code']:  # 即响应内容与预期不符，目前只判断了响应中的code
-                    addLogs(case_id, interface_name, 0)
-                    addBugLogs([case_id, interface_name, new_url, method, json.dumps(
-                        expect_result), r.text, r.text])
-                else:  # 即用例通过
-                    addLogs(case_id, interface_name)
+                if response['code'] != expect_result['code']: # 即响应内容与预期不符，目前只判断了响应中的code
+                    addBugLogs([case_id, new_url, method, json.dumps(expect_result), r.text, response])
+                    addLogs(case_id, 0)
+                else: # 即用例通过
+                    addLogs(case_id)
 
 
 def doTest():
