@@ -107,9 +107,27 @@ def addLogs(test_case_id, test_case_name, is_success=1):
     count_num = cur.fetchone()[1]
     cur.close()
 
+    insert_string = '''
+    insert into logs (
+        count, 
+        test_case_id, 
+        test_case_name, 
+        is_success, 
+        create_at) 
+    values (
+        %d, 
+        %d, 
+        '%s', 
+        %d, 
+        '%s')''' % (
+        count_num, 
+        test_case_id, 
+        test_case_name, 
+        is_success, 
+        create_at)
+
     cur = conn.cursor()
-    cur.execute("insert into logs (count, test_case_id, test_case_name, is_success, create_at) values (%d, %d, '%s', %d, '%s')" % (
-        count_num, test_case_id, test_case_name, is_success, create_at))
+    cur.execute(insert_string)
     cur.close()
     conn.commit()
     conn.close()
@@ -139,9 +157,39 @@ def addBugLogs(param_list):
     count_num = cur.fetchone()[1]
     cur.close()
 
+    insert_string = '''
+    insert into bug_logs (
+        count, 
+        test_case_id, 
+        test_case_name, 
+        request_url, 
+        method, 
+        expect_result, 
+        response, 
+        result, 
+        create_at) 
+    values (
+        %d, 
+        %d, 
+        '%s', 
+        '%s', 
+        '%s', 
+        '%s', 
+        '%s', 
+        '%s', 
+        '%s')''' % (
+        count_num, 
+        test_case_id, 
+        test_case_name, 
+        request_url, 
+        method, 
+        expect_result, 
+        response, 
+        result, 
+        create_at)
+
     cur = conn.cursor()
-    cur.execute("insert into bug_logs (count, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at) values (%d, %d, '%s', '%s', '%s', '%s', '%s', '%s', '%s')" % (
-        count_num, test_case_id, test_case_name, request_url, method, expect_result, response, result, create_at))
+    cur.execute(insert_string)
     cur.close()
     conn.commit()
     conn.close()
