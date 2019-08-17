@@ -2,7 +2,7 @@
 # @Author: MirrorAi
 # @Date:   2019-08-17 19:56:54
 # @Last Modified by:   MirroAi
-# @Last Modified time: 2019-08-17 19:57:24
+# @Last Modified time: 2019-08-17 20:34:59
 
 
 from env_variables import HOSTS, token, LOGIN
@@ -96,8 +96,9 @@ def counting():
 
     flag = cur.execute("select * from counting")
     if flag == 0:   # 表中没有任何记录，则为第一次执行测试
-        cur.execute("insert into counting (count) values (1)")
+        cur.execute("insert into counting (type, count) values (0, 1)")
     elif flag == 1:   # 表中有记录，则不为第一次，需要从表中读取数据后，修改表中数据
+        # 这里需要修改，改了counting表
         count_num = cur.fetchone()[1]
         cur.execute("update counting set count=%d" % (count_num+1))
     cur.close()
