@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+# @Author: MirrorAi
+# @Date:   2019-08-17 19:56:54
+# @Last Modified by:   MirroAi
+# @Last Modified time: 2019-08-17 19:57:24
+
+
 from env_variables import HOSTS, token, LOGIN
 import requests
 import json
