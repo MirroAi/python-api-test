@@ -216,7 +216,7 @@ def assertSth(r, param_list):  # r为request对象， param_list为list
     expect_result = param_list[4]
 
 
-    try:
+    try:    # 目前只判断了状态码和约定功能正常的状态码
         response = r.json()
     except json.decoder.JSONDecodeError:
         e_result = '{"status_code": 200}'
